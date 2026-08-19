@@ -76,6 +76,25 @@ export function HomePage() {
     }
   }, [refetchTimesheets]);
 
+  const handleDeleteMany = useCallback(async (list: Timesheet[]) => {
+    if (list.length === 0) return;
+    if (!window.confirm(`Delete ${list.length} timesheet entr${list.length === 1 ? 'y' : 'ies'}?`)) return;
+    let failed = 0;
+    for (const t of list) {
+      try {
+        await deleteTimesheet(t.id);
+      } catch {
+        failed++;
+      }
+    }
+    if (failed === 0) {
+      toast.success(`${list.length} entr${list.length === 1 ? 'y' : 'ies'} deleted`);
+    } else {
+      toast.error(`${failed} of ${list.length} failed to delete`);
+    }
+    refetchTimesheets();
+  }, [refetchTimesheets]);
+
   const totalSeconds = useMemo(
     () => timesheets.reduce((sum, t) => sum + t.duration, 0),
     [timesheets],
@@ -107,6 +126,7 @@ export function HomePage() {
         loading={loading}
         onEdit={setEditTarget}
         onDelete={handleDelete}
+        onDeleteMany={handleDeleteMany}
       />
 
       <div className="flex items-center justify-end text-sm text-muted-foreground">
