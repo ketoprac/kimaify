@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Timer, Key, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../auth/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ export function LoginPage() {
     e.preventDefault();
     const trimmed = token.trim();
     if (!trimmed) {
+      toast.error('Please enter your Kimai token.');
       setLocalError('Please enter your Kimai token.');
       return;
     }
@@ -25,9 +27,10 @@ export function LoginPage() {
     setLocalError('');
     try {
       await login(trimmed);
+      toast.success('Signed in successfully');
       navigate('/', { replace: true });
     } catch {
-      // error is set in context
+      toast.error('Your Kimai token is invalid or expired.');
     } finally {
       setSubmitting(false);
     }

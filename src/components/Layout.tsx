@@ -16,9 +16,14 @@ export function Layout() {
           </Link>
           <div className="flex items-center gap-4">
             {user && (
-              <span className="text-sm text-muted-foreground hidden sm:inline">
-                {user.alias}
-              </span>
+              <div className="flex items-center gap-2 hidden sm:flex">
+                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-brand-green-dark text-white text-sm font-medium">
+                  {user.alias.charAt(0).toUpperCase()}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {user.alias}
+                </span>
+              </div>
             )}
             <Button
               onClick={logout}

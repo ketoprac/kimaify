@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Plus, ArrowLeft, Send, Trash2, Copy } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useBulkRows } from '../hooks/useBulkRows';
 import { createTimesheet } from '../api/timesheets';
 import { todayDateStr, toISOWithTZ } from '../utils/time';
@@ -79,6 +80,8 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups }: Props) {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    let successCount = 0;
+    let failedCount = 0;
     for (const row of rows) {
       setRowStatus(row.id, 'submitting');
       try {
@@ -94,12 +97,20 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups }: Props) {
           await createTimesheet(payload);
         }
         setRowStatus(row.id, 'success');
+        successCount++;
       } catch (err: any) {
         setRowStatus(row.id, 'error', err.message || 'Failed to create timesheet entry');
+        failedCount++;
       }
     }
     setSubmitting(false);
     setStep('result');
+
+    if (failedCount === 0) {
+      toast.success(`${successCount} entr${successCount === 1 ? 'y' : 'ies'} created`);
+    } else {
+      toast.error(`${failedCount} entr${failedCount === 1 ? 'y' : 'ies'} failed to create`);
+    }
   };
 
   const reset = () => {

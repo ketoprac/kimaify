@@ -33,10 +33,11 @@ export function TimesheetTable({ timesheets, lookups, loading }: Props) {
   }
 
   return (
-    <div className="border rounded-lg">
-      <Table>
+    <div className="border rounded-lg overflow-x-auto">
+      <Table className="min-w-[720px]">
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10">No</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Start</TableHead>
             <TableHead>End</TableHead>
@@ -48,8 +49,9 @@ export function TimesheetTable({ timesheets, lookups, loading }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {timesheets.map((t) => (
+          {timesheets.map((t, i) => (
             <TableRow key={t.id}>
+              <TableCell className="text-muted-foreground">{i + 1}</TableCell>
               <TableCell className="whitespace-nowrap">{formatDate(t.begin)}</TableCell>
               <TableCell className="whitespace-nowrap">{formatTime(t.begin)}</TableCell>
               <TableCell className="whitespace-nowrap">{formatTime(t.end)}</TableCell>
