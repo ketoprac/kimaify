@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
 import { Command as CommandPrimitive } from 'cmdk';
 import { Search } from 'lucide-react';
-import { type ComponentPropsWithoutRef, type HTMLAttributes, forwardRef } from 'react';
+import { type ComponentPropsWithoutRef, forwardRef } from 'react';
 
-const Command = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const Command = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<typeof CommandPrimitive>>(
   ({ className, ...props }, ref) => (
     <CommandPrimitive
       ref={ref}
@@ -31,7 +31,7 @@ const CommandInput = forwardRef<HTMLInputElement, ComponentPropsWithoutRef<typeo
 );
 CommandInput.displayName = CommandPrimitive.Input.displayName ?? 'CommandInput';
 
-const CommandList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const CommandList = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<typeof CommandPrimitive.List>>(
   ({ className, ...props }, ref) => (
     <CommandPrimitive.List
       ref={ref}
@@ -42,12 +42,12 @@ const CommandList = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 );
 CommandList.displayName = CommandPrimitive.List.displayName ?? 'CommandList';
 
-const CommandEmpty = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const CommandEmpty = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>>(
   (props, ref) => <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 );
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName ?? 'CommandEmpty';
 
-const CommandGroup = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const CommandGroup = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<typeof CommandPrimitive.Group>>(
   ({ className, ...props }, ref) => (
     <CommandPrimitive.Group
       ref={ref}
@@ -61,7 +61,7 @@ const CommandGroup = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 );
 CommandGroup.displayName = CommandPrimitive.Group.displayName ?? 'CommandGroup';
 
-const CommandItem = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+const CommandItem = forwardRef<HTMLDivElement, ComponentPropsWithoutRef<typeof CommandPrimitive.Item>>(
   ({ className, ...props }, ref) => (
     <CommandPrimitive.Item
       ref={ref}

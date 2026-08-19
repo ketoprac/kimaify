@@ -36,8 +36,8 @@ function readCache(): Refs | null {
   }
 }
 
-function writeCache(data: Omit<Refs, 'fetchedAt'>) {
-  sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...data, fetchedAt: Date.now() }));
+function writeCache(data: Refs) {
+  sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
 }
 
 export async function fetchRefs(): Promise<Refs> {
@@ -50,7 +50,7 @@ export async function fetchRefs(): Promise<Refs> {
     getActivities(),
   ]);
 
-  const data = { customers, projects, activities };
+  const data: Refs = { customers, projects, activities, fetchedAt: Date.now() };
   writeCache(data);
   return data;
 }
