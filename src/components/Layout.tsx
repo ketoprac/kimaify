@@ -16,7 +16,7 @@ export function Layout() {
           </Link>
           <div className="flex items-center gap-4">
             {user && (
-              <div className="flex items-center gap-2 hidden sm:flex">
+              <div className="hidden sm:flex items-center gap-2">
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-brand-green-dark text-white text-sm font-medium">
                   {user.alias.charAt(0).toUpperCase()}
                 </span>

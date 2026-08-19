@@ -27,6 +27,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lookups: LookupMaps | null;
+  onSubmitted: () => void;
 }
 
 type Step = 'fill' | 'preview' | 'result';
@@ -41,7 +42,7 @@ function FieldLabel({ label, error, children }: { label: string; error?: string;
   );
 }
 
-export function CreateTimesheetModal({ open, onOpenChange, lookups }: Props) {
+export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted }: Props) {
   const {
     date,
     rows,
@@ -105,6 +106,7 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups }: Props) {
     }
     setSubmitting(false);
     setStep('result');
+    onSubmitted();
 
     if (failedCount === 0) {
       toast.success(`${successCount} entr${successCount === 1 ? 'y' : 'ies'} created`);
@@ -332,7 +334,7 @@ function splitIntoHours(begin: string, end: string): [string, string][] {
   const segments: [string, string][] = [];
   let cursor = start;
   while (cursor < finish) {
-    const next = Math.min(cursor + 60, finish);
+    const next = Math.min(cursor + 120, finish);
     segments.push([toHHMM(cursor), toHHMM(next)]);
     cursor = next;
   }

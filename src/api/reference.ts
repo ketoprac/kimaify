@@ -17,6 +17,7 @@ export interface LookupMaps {
   customerName: Map<number, string>;    // customerId → name
   projectName: Map<number, string>;     // projectId → name
   projectCustomer: Map<number, string>; // projectId → customerName
+  projectCustomerId: Map<number, number>; // projectId → customerId
   activityName: Map<number, string>;    // activityId → name
 }
 
@@ -60,13 +61,15 @@ export function buildMaps(refs: Refs): LookupMaps {
 
   const projectName = new Map<number, string>();
   const projectCustomer = new Map<number, string>();
+  const projectCustomerId = new Map<number, number>();
   refs.projects.forEach(p => {
     projectName.set(p.id, p.name);
     projectCustomer.set(p.id, customerName.get(p.customer) ?? '');
+    projectCustomerId.set(p.id, p.customer);
   });
 
   const activityName = new Map<number, string>();
   refs.activities.forEach(a => activityName.set(a.id, a.name));
 
-  return { customerName, projectName, projectCustomer, activityName };
+  return { customerName, projectName, projectCustomer, projectCustomerId, activityName };
 }

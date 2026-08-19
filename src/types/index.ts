@@ -72,3 +72,12 @@ export interface CreateTimesheetPayload {
   description: string;
   tags: string;
 }
+
+export interface UpdateTimesheetPayload {
+  begin: string;
+  end: string;
+  project: number;
+  activity: number;
+  description: string;
+  tags: string;
+}
