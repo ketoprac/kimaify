@@ -1,14 +1,16 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Plus, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, ArrowLeft, ArrowRight, CalendarDays, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getTimesheets, deleteTimesheet } from '../api/timesheets';
 import { fetchRefs, buildMaps, type LookupMaps } from '../api/reference';
 import { TimesheetTable } from '../components/TimesheetTable';
+import { CalendarView } from '../components/CalendarView';
 import { CreateTimesheetModal } from '../components/CreateTimesheetModal';
 import { EditTimesheetModal } from '../components/EditTimesheetModal';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { todayDateStr, formatDuration } from '../utils/time';
-import { addDays, subDays, parse, format, isSameDay } from 'date-fns';
+import { addDays, subDays, parse, format, isSameDay, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import type { Timesheet } from '../types';
 
@@ -21,6 +23,7 @@ export function HomePage() {
   const [date, setDate] = useState(todayDateStr());
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Timesheet | null>(null);
+  const [view, setView] = useState<'day' | 'month'>('day');
 
   const refetchTimesheets = useCallback(async () => {
     try {
@@ -57,9 +60,25 @@ export function HomePage() {
     setDate(d => format(addDays(parse(d, 'yyyy-MM-dd', new Date()), 1), 'yyyy-MM-dd'));
   }, []);
 
+  const prevMonth = useCallback(() => {
+    setDate(d => format(startOfMonth(subMonths(parse(d, 'yyyy-MM-dd', new Date()), 1)), 'yyyy-MM-dd'));
+  }, []);
+
+  const nextMonth = useCallback(() => {
+    setDate(d => format(startOfMonth(addMonths(parse(d, 'yyyy-MM-dd', new Date()), 1)), 'yyyy-MM-dd'));
+  }, []);
+
   const displayDate = useMemo(() => {
     try {
       return format(parse(date, 'yyyy-MM-dd', new Date()), 'EEEE, dd MMM yyyy');
+    } catch {
+      return date;
+    }
+  }, [date]);
+
+  const displayMonth = useMemo(() => {
+    try {
+      return format(parse(date, 'yyyy-MM-dd', new Date()), 'MMMM yyyy');
     } catch {
       return date;
     }
@@ -104,34 +123,71 @@ export function HomePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button onClick={prevDay} variant="ghost" size="icon" className="h-8 w-8">
+          <Button
+            onClick={view === 'day' ? prevDay : prevMonth}
+            variant="ghost" size="icon" className="h-8 w-8"
+          >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <h2 className="text-lg font-semibold min-w-[180px] text-center">
-            {displayDate}
+          <h2 className="text-lg font-semibold min-w-[200px] text-center">
+            {view === 'day' ? displayDate : displayMonth}
           </h2>
-          <Button onClick={nextDay} variant="ghost" size="icon" className="h-8 w-8">
+          <Button
+            onClick={view === 'day' ? nextDay : nextMonth}
+            variant="ghost" size="icon" className="h-8 w-8"
+          >
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
-          <Plus className="w-4 h-4" />
-          Add Activity
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border p-0.5 gap-0.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn('h-7 gap-1.5 rounded-sm', view === 'day' ? 'bg-foreground text-background hover:bg-foreground/90' : 'text-muted-foreground')}
+              onClick={() => setView('day')}
+            >
+              <List className="w-3.5 h-3.5" />
+              Day
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn('h-7 gap-1.5 rounded-sm', view === 'month' ? 'bg-foreground text-background hover:bg-foreground/90' : 'text-muted-foreground')}
+              onClick={() => setView('month')}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              Month
+            </Button>
+          </div>
+          <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Add Activity
+          </Button>
+        </div>
       </div>
 
-      <TimesheetTable
-        timesheets={timesheets}
-        lookups={lookups}
-        loading={loading}
-        onEdit={setEditTarget}
-        onDelete={handleDelete}
-        onDeleteMany={handleDeleteMany}
-      />
-
-      <div className="flex items-center justify-end text-sm text-muted-foreground">
-        Total: <span className="font-semibold text-foreground ml-1.5">{formatDuration(totalSeconds)}</span>
-      </div>
+      {view === 'month' ? (
+        <CalendarView
+          allTimesheets={allTimesheets}
+          date={date}
+          onSelectDay={(d) => { setDate(d); setView('day'); }}
+        />
+      ) : (
+        <>
+          <TimesheetTable
+            timesheets={timesheets}
+            lookups={lookups}
+            loading={loading}
+            onEdit={setEditTarget}
+            onDelete={handleDelete}
+            onDeleteMany={handleDeleteMany}
+          />
+          <div className="flex items-center justify-end text-sm text-muted-foreground">
+            Total: <span className="font-semibold text-foreground ml-1.5">{formatDuration(totalSeconds)}</span>
+          </div>
+        </>
+      )}
 
       <CreateTimesheetModal open={createOpen} onOpenChange={setCreateOpen} lookups={lookups} onSubmitted={refetchTimesheets} />
 
