@@ -24,7 +24,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
     </BrowserRouter>
   );
 }

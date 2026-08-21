@@ -1,16 +1,17 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Plus, ArrowLeft, ArrowRight, CalendarDays, List } from 'lucide-react';
+import { Plus, ArrowLeft, ArrowRight, CalendarDays, List, CalendarRange } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getTimesheets, deleteTimesheet } from '../api/timesheets';
 import { fetchRefs, buildMaps, type LookupMaps } from '../api/reference';
 import { TimesheetTable } from '../components/TimesheetTable';
 import { CalendarView } from '../components/CalendarView';
+import { WeekView } from '../components/WeekView';
 import { CreateTimesheetModal } from '../components/CreateTimesheetModal';
 import { EditTimesheetModal } from '../components/EditTimesheetModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { todayDateStr, formatDuration } from '../utils/time';
-import { addDays, subDays, parse, format, isSameDay, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { addDays, subDays, addWeeks, subWeeks, startOfWeek, parse, format, isSameDay, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import type { Timesheet } from '../types';
 
@@ -23,7 +24,7 @@ export function HomePage() {
   const [date, setDate] = useState(todayDateStr());
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Timesheet | null>(null);
-  const [view, setView] = useState<'day' | 'month'>('day');
+  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
 
   const refetchTimesheets = useCallback(async () => {
     try {
@@ -68,6 +69,14 @@ export function HomePage() {
     setDate(d => format(startOfMonth(addMonths(parse(d, 'yyyy-MM-dd', new Date()), 1)), 'yyyy-MM-dd'));
   }, []);
 
+  const prevWeek = useCallback(() => {
+    setDate(d => format(subWeeks(parse(d, 'yyyy-MM-dd', new Date()), 1), 'yyyy-MM-dd'));
+  }, []);
+
+  const nextWeek = useCallback(() => {
+    setDate(d => format(addWeeks(parse(d, 'yyyy-MM-dd', new Date()), 1), 'yyyy-MM-dd'));
+  }, []);
+
   const displayDate = useMemo(() => {
     try {
       return format(parse(date, 'yyyy-MM-dd', new Date()), 'EEEE, dd MMM yyyy');
@@ -79,6 +88,18 @@ export function HomePage() {
   const displayMonth = useMemo(() => {
     try {
       return format(parse(date, 'yyyy-MM-dd', new Date()), 'MMMM yyyy');
+    } catch {
+      return date;
+    }
+  }, [date]);
+
+  const displayWeek = useMemo(() => {
+    try {
+      const d = parse(date, 'yyyy-MM-dd', new Date());
+      const start = startOfWeek(d, { weekStartsOn: 1 });
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return `${format(start, 'dd MMM')} – ${format(end, 'dd MMM yyyy')}`;
     } catch {
       return date;
     }
@@ -119,6 +140,14 @@ export function HomePage() {
     [timesheets],
   );
 
+  const monthTotalSeconds = useMemo(() => {
+    const d = parse(date, 'yyyy-MM-dd', new Date());
+    const y = d.getFullYear(), m = d.getMonth();
+    return allTimesheets
+      .filter(t => { const td = toZonedTime(new Date(t.begin), TZ); return td.getFullYear() === y && td.getMonth() === m; })
+      .reduce((sum, t) => sum + t.duration, 0);
+  }, [allTimesheets, date]);
+
   // Press 'N' to open Add Activity (ignore when typing in inputs)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -137,16 +166,16 @@ export function HomePage() {
       <div className="sticky top-14 z-10 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button
-            onClick={view === 'day' ? prevDay : prevMonth}
+            onClick={view === 'day' ? prevDay : view === 'week' ? prevWeek : prevMonth}
             variant="ghost" size="icon" className="h-8 w-8"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <h2 className="text-lg font-semibold min-w-[200px] text-center">
-            {view === 'day' ? displayDate : displayMonth}
+            {view === 'day' ? displayDate : view === 'week' ? displayWeek : displayMonth}
           </h2>
           <Button
-            onClick={view === 'day' ? nextDay : nextMonth}
+            onClick={view === 'day' ? nextDay : view === 'week' ? nextWeek : nextMonth}
             variant="ghost" size="icon" className="h-8 w-8"
           >
             <ArrowRight className="w-4 h-4" />
@@ -162,6 +191,15 @@ export function HomePage() {
             >
               <List className="w-3.5 h-3.5" />
               Day
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn('h-7 gap-1.5 rounded-sm', view === 'week' ? 'bg-foreground text-background hover:bg-foreground/90' : 'text-muted-foreground')}
+              onClick={() => setView('week')}
+            >
+              <CalendarRange className="w-3.5 h-3.5" />
+              Week
             </Button>
             <Button
               variant="ghost"
@@ -182,10 +220,25 @@ export function HomePage() {
       </div>
 
       {view === 'month' ? (
-        <CalendarView
+        <>
+          <CalendarView
+            allTimesheets={allTimesheets}
+            date={date}
+            onSelectDay={(d) => { setDate(d); setView('day'); }}
+          />
+          {monthTotalSeconds > 0 && (
+            <div className="flex items-center justify-end text-sm text-muted-foreground">
+              Month total: <span className="font-semibold text-foreground ml-1.5">{formatDuration(monthTotalSeconds)}</span>
+            </div>
+          )}
+        </>
+      ) : view === 'week' ? (
+        <WeekView
           allTimesheets={allTimesheets}
           date={date}
+          lookups={lookups}
           onSelectDay={(d) => { setDate(d); setView('day'); }}
+          onEdit={setEditTarget}
         />
       ) : (
         <>
