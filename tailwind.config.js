@@ -1,44 +1,45 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        // Semantic surface (mapped to shadcn primitives)
-        background: '#FFFFFF', // canvas
-        foreground: '#001E2B', // ink
+        // Semantic surface (mapped to shadcn primitives) — values from CSS vars
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
         card: {
-          DEFAULT: '#FFFFFF',
-          foreground: '#001E2B',
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
         },
         popover: {
-          DEFAULT: '#FFFFFF',
-          foreground: '#001E2B',
+          DEFAULT: 'var(--popover)',
+          foreground: 'var(--popover-foreground)',
         },
         primary: {
-          DEFAULT: '#00ED64', // brand-green
-          foreground: '#001E2B', // on-primary
+          DEFAULT: 'var(--primary)',
+          foreground: 'var(--primary-foreground)',
         },
-        'primary-pressed': '#00A35C',
+        'primary-pressed': 'var(--primary-pressed)',
         secondary: {
-          DEFAULT: '#F9FBFA',
-          foreground: '#001E2B',
+          DEFAULT: 'var(--secondary)',
+          foreground: 'var(--secondary-foreground)',
         },
         accent: {
-          DEFAULT: '#E3FCF7', // brand-green-soft
-          foreground: '#00684A', // brand-green-dark
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
         },
         destructive: {
-          DEFAULT: '#DB3030',
-          foreground: '#FFFFFF',
+          DEFAULT: 'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
         },
         muted: {
-          DEFAULT: '#F9FBFA', // surface
-          foreground: '#5C6C75', // steel
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
         },
-        border: '#E8EDEB', // hairline
-        input: '#C1C7C6', // hairline-strong
-        ring: '#00684A', // brand-green-dark
+        border: 'var(--border)',
+        input: 'var(--input)',
+        ring: 'var(--ring)',
 
         // Brand & accent (DESIGN.md tokens)
         brand: {

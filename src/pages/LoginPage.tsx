@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Timer, Key, Eye, EyeOff } from 'lucide-react';
+import { Timer, Key, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../auth/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function LoginPage() {
   const { login, error: authError, loading } = useAuth();
+  const { theme, toggle } = useTheme();
   const [token, setToken] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -40,6 +42,13 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
+      <button
+        onClick={toggle}
+        className="absolute top-4 right-4 p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        aria-label="Toggle theme"
+      >
+        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-green-soft rounded-lg mb-4">

@@ -1,10 +1,12 @@
 import { Link, Outlet } from 'react-router-dom';
-import { LogOut, Timer } from 'lucide-react';
+import { LogOut, Timer, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { Button } from './ui/button';
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const { theme, toggle } = useTheme();
 
   return (
     <div className="min-h-screen bg-background">
@@ -25,6 +27,15 @@ export function Layout() {
                 </span>
               </div>
             )}
+            <Button
+              onClick={toggle}
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
             <Button
               onClick={logout}
               variant="ghost"

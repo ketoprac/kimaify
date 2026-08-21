@@ -9,7 +9,8 @@ import { formatDuration } from '../utils/time';
 import type { Timesheet } from '../types';
 
 const TZ = 'Asia/Jakarta';
-const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKEND_COLS = new Set([5, 6]); // Sat=index 5, Sun=index 6 in Mon-start grid
 
 interface Props {
   allTimesheets: Timesheet[];
@@ -24,8 +25,8 @@ export function CalendarView({ allTimesheets, date, onSelectDay }: Props) {
   );
 
   const days = useMemo(() => {
-    const gridStart = startOfWeek(monthStart);
-    const gridEnd = endOfWeek(endOfMonth(monthStart));
+    const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const gridEnd = endOfWeek(endOfMonth(monthStart), { weekStartsOn: 1 });
     return eachDayOfInterval({ start: gridStart, end: gridEnd });
   }, [monthStart]);
 
@@ -51,8 +52,11 @@ export function CalendarView({ allTimesheets, date, onSelectDay }: Props) {
     <div className="border rounded-lg overflow-hidden">
       {/* Day-of-week header */}
       <div className="grid grid-cols-7 border-b bg-muted/30">
-        {DOW.map(d => (
-          <div key={d} className="py-2 text-center text-xs font-medium text-muted-foreground">
+        {DOW.map((d, i) => (
+          <div key={d} className={cn(
+            'py-2 text-center text-xs font-medium text-muted-foreground',
+            WEEKEND_COLS.has(i) && 'text-muted-foreground/60 bg-muted/20',
+          )}>
             {d}
           </div>
         ))}
@@ -60,13 +64,14 @@ export function CalendarView({ allTimesheets, date, onSelectDay }: Props) {
 
       {/* Day cells */}
       <div className="grid grid-cols-7">
-        {days.map(day => {
+        {days.map((day, i) => {
           const key = format(day, 'yyyy-MM-dd');
           const seconds = dailySeconds.get(key) ?? 0;
           const isCurrentMonth = isSameMonth(day, monthStart);
           const isSelected = isSameDay(day, parse(date, 'yyyy-MM-dd', new Date()));
           const isToday = key === today;
           const barHeight = seconds > 0 ? Math.max(3, Math.round((seconds / maxSeconds) * 28)) : 0;
+          const isWeekend = WEEKEND_COLS.has(i % 7);
 
           return (
             <button
@@ -75,6 +80,7 @@ export function CalendarView({ allTimesheets, date, onSelectDay }: Props) {
               className={cn(
                 'relative flex flex-col items-center gap-1 py-2 px-1 min-h-[64px] border-b border-r text-sm transition-colors',
                 'hover:bg-muted/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                isWeekend && 'bg-muted/10',
                 !isCurrentMonth && 'opacity-30',
                 isSelected && 'bg-primary/10',
               )}
@@ -93,7 +99,7 @@ export function CalendarView({ allTimesheets, date, onSelectDay }: Props) {
               {seconds > 0 && (
                 <div className="flex flex-col items-center gap-0.5 w-full px-1">
                   <div
-                    className="w-full rounded-sm bg-primary/60"
+                    className="w-full rounded-sm bg-primary opacity-60"
                     style={{ height: `${barHeight}px` }}
                   />
                   <span className="text-[10px] text-muted-foreground leading-none">

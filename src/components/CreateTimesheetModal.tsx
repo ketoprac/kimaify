@@ -324,6 +324,9 @@ function minutesBetween(begin: string, end: string): number | null {
   return eh * 60 + em - (bh * 60 + bm);
 }
 
+const LUNCH_START = 12 * 60; // 12:00
+const LUNCH_END = 13 * 60;   // 13:00
+
 function splitIntoHours(begin: string, end: string): [string, string][] {
   if (!begin || !end) return [];
   const [bh, bm] = begin.split(':').map(Number);
@@ -334,9 +337,16 @@ function splitIntoHours(begin: string, end: string): [string, string][] {
   const segments: [string, string][] = [];
   let cursor = start;
   while (cursor < finish) {
-    const next = Math.min(cursor + 120, finish);
-    segments.push([toHHMM(cursor), toHHMM(next)]);
-    cursor = next;
+    // Skip over lunch break
+    if (cursor >= LUNCH_START && cursor < LUNCH_END) {
+      cursor = LUNCH_END;
+      continue;
+    }
+    // Cap segment end at lunch start if it would overlap
+    const segEnd = Math.min(cursor + 120, finish);
+    const effectiveEnd = segEnd > LUNCH_START && cursor < LUNCH_START ? LUNCH_START : segEnd;
+    segments.push([toHHMM(cursor), toHHMM(effectiveEnd)]);
+    cursor = effectiveEnd;
   }
   return segments;
 }
