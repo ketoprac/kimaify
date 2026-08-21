@@ -119,9 +119,22 @@ export function HomePage() {
     [timesheets],
   );
 
+  // Press 'N' to open Add Activity (ignore when typing in inputs)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        setCreateOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="sticky top-14 z-10 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button
             onClick={view === 'day' ? prevDay : prevMonth}
@@ -163,6 +176,7 @@ export function HomePage() {
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4" />
             Add Activity
+            <kbd className="hidden sm:inline-flex items-center justify-center h-4 px-1 rounded border border-current/30 text-[10px] font-mono opacity-60 ml-0.5">N</kbd>
           </Button>
         </div>
       </div>
@@ -182,6 +196,7 @@ export function HomePage() {
             onEdit={setEditTarget}
             onDelete={handleDelete}
             onDeleteMany={handleDeleteMany}
+            onAdd={() => setCreateOpen(true)}
           />
           <div className="flex items-center justify-end text-sm text-muted-foreground">
             Total: <span className="font-semibold text-foreground ml-1.5">{formatDuration(totalSeconds)}</span>

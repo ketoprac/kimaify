@@ -5,7 +5,7 @@ import { formatTime, formatDate, formatDuration } from '../utils/time';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Plus } from 'lucide-react';
 
 interface Props {
   timesheets: Timesheet[];
@@ -14,9 +14,10 @@ interface Props {
   onEdit: (timesheet: Timesheet) => void;
   onDelete: (timesheet: Timesheet) => void;
   onDeleteMany: (timesheets: Timesheet[]) => void;
+  onAdd?: () => void;
 }
 
-export function TimesheetTable({ timesheets, lookups, loading, onEdit, onDelete, onDeleteMany }: Props) {
+export function TimesheetTable({ timesheets, lookups, loading, onEdit, onDelete, onDeleteMany, onAdd }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const toggle = (id: number) => {
@@ -58,8 +59,14 @@ export function TimesheetTable({ timesheets, lookups, loading, onEdit, onDelete,
   if (timesheets.length === 0) {
     return (
       <Card>
-        <CardContent className="p-8 text-center text-muted-foreground">
-          No timesheet entries for this date.
+        <CardContent className="p-8 text-center">
+          <p className="text-muted-foreground mb-3">No entries for this day.</p>
+          {onAdd && (
+            <Button size="sm" className="gap-1.5" onClick={onAdd}>
+              <Plus className="w-4 h-4" />
+              Add Activity
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -67,7 +74,40 @@ export function TimesheetTable({ timesheets, lookups, loading, onEdit, onDelete,
 
   return (
     <div className="space-y-3">
-      <div className="border rounded-lg overflow-x-auto">
+      {/* Mobile card layout */}
+      <div className="sm:hidden space-y-2">
+        {timesheets.map((t, i) => (
+          <Card key={t.id}>
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-medium">
+                    {formatTime(t.begin)} – {formatTime(t.end)}
+                    <span className="ml-2 text-xs text-muted-foreground">{formatDuration(t.duration)}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {lookups?.projectName.get(t.project) ?? '-'} · {lookups?.activityName.get(t.activity) ?? '-'}
+                  </div>
+                  {t.description && (
+                    <div className="text-xs text-muted-foreground truncate max-w-[240px]">{t.description}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(t)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(t)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Desktop table layout */}
+      <div className="hidden sm:block border rounded-lg overflow-x-auto">
       <Table className="min-w-[720px]">
         <TableHeader>
           <TableRow>
