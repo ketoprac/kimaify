@@ -1,11 +1,19 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { Plus, ArrowLeft, Send, Trash2, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useBulkRows } from '../hooks/useBulkRows';
 import { createTimesheet } from '../api/timesheets';
 import { todayDateStr, toISOWithTZ } from '../utils/time';
-import { validateRow, hasErrors, type RowErrors } from '../utils/validation';
-import type { BulkRow, CreateTimesheetPayload } from '../types';
+import { minutesBetween, splitIntoHours } from '../utils/schedule';
+import {
+  validateRow,
+  hasErrors,
+  MAX_LOOKBACK_DAYS,
+  lookbackFloor,
+  isWeekend,
+  type RowErrors,
+} from '../utils/validation';
+import type { CreateTimesheetPayload } from '../types';
 import type { LookupMaps } from '../api/reference';
 import { TimeInput } from './TimeInput';
 import { CustomerSelect } from './CustomerSelect';
@@ -32,6 +40,10 @@ interface Props {
 
 type Step = 'fill' | 'preview' | 'result';
 
+// Upper bound on rows per bulk submission — keeps a stray "duplicate row"
+// click-storm from fanning out into thousands of Kimai POSTs.
+const MAX_ROWS = 50;
+
 function FieldLabel({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (
     <label className="block space-y-1.5">
@@ -57,6 +69,25 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
   const [step, setStep] = useState<Step>('fill');
   const [errors, setErrors] = useState<Map<string, RowErrors>>(new Map());
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous double-submit latch. React state updates are batched, so two
+  // rapid clicks can both observe `submitting === false` in the same tick;
+  // the ref is checked before any state changes.
+  const submittingRef = useRef(false);
+  // Rows that exactly duplicate another row in the batch (same project/activity/
+  // times/description). Warned about at preview; submission stays allowed since
+  // legitimate use exists (e.g. same slot across different tags).
+  const duplicateRowIds = useMemo(() => {
+    const seen = new Map<string, string[]>();
+    for (const r of rows) {
+      const key = `${r.customerId}|${r.projectId}|${r.activityId}|${r.begin}|${r.end}|${r.description}|${r.tags}`;
+      seen.set(key, [...(seen.get(key) ?? []), r.id]);
+    }
+    const dups = new Set<string>();
+    for (const ids of seen.values()) {
+      if (ids.length > 1) ids.forEach((id) => dups.add(id));
+    }
+    return dups;
+  }, [rows]);
 
   const previewRows = useMemo(() => {
     return rows.map((r) => ({
@@ -69,6 +100,11 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
     }));
   }, [rows, lookups]);
 
+  const totalSegments = useMemo(
+    () => previewRows.reduce((sum, r) => sum + r.segments, 0),
+    [previewRows],
+  );
+
   const goPreview = () => {
     const newErrors = new Map<string, RowErrors>();
     rows.forEach((r) => {
@@ -79,7 +115,23 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
     if (newErrors.size === 0) setStep('preview');
   };
 
+  const dateWarnings = useMemo(() => {
+    const warnings: string[] = [];
+    if (date < lookbackFloor()) {
+      warnings.push(`Date is more than ${MAX_LOOKBACK_DAYS} days in the past`);
+    } else {
+      const d = new Date(`${date}T00:00:00`);
+      const dow = d.getDay();
+      if (!Number.isNaN(dow) && isWeekend(dow)) {
+        warnings.push('Selected date falls on a weekend');
+      }
+    }
+    return warnings;
+  }, [date]);
+
   const handleSubmit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     let successCount = 0;
     let failedCount = 0;
@@ -105,6 +157,7 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
       }
     }
     setSubmitting(false);
+    submittingRef.current = false;
     setStep('result');
     onSubmitted();
 
@@ -138,21 +191,38 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
 
         {step === 'fill' && (
           <div className="space-y-4">
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-xs font-medium text-muted-foreground">Date:</span>
-              <Input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-8 w-auto"
-              />
-            </label>
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-xs font-medium text-muted-foreground">Date:</span>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="h-8 w-auto"
+                />
+              </label>
+              {errors.size > 0 &&
+                [...new Set([...errors.values()].map((e) => e.date).filter(Boolean))].map(
+                  (msg) => (
+                    <p key={msg} className="text-sm text-destructive">
+                      {msg}
+                    </p>
+                  ),
+                )}
+            </div>
 
             <div className="space-y-4">
               {rows.map((row, i) => (
                 <div key={row.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">Entry {i + 1}</span>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Entry {i + 1}
+                      {duplicateRowIds.has(row.id) && (
+                        <span className="ml-2 text-amber-600 dark:text-amber-400">
+                          duplicate of another entry
+                        </span>
+                      )}
+                    </span>
                     <div className="flex items-center gap-0.5">
                       <Button
                         onClick={() => duplicateRow(row.id)}
@@ -234,10 +304,16 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
               ))}
             </div>
 
-            <Button onClick={addRow} disabled={submitting} variant="outline" size="sm">
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Entry
-            </Button>
+            {rows.length >= MAX_ROWS ? (
+              <p className="text-xs text-muted-foreground">
+                Maximum of {MAX_ROWS} entries per submission reached.
+              </p>
+            ) : (
+              <Button onClick={addRow} disabled={submitting} variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Entry
+              </Button>
+            )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
@@ -252,6 +328,25 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
 
         {step === 'preview' && (
           <div className="space-y-4">
+            {dateWarnings.length > 0 && (
+              <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
+                {dateWarnings.map((w) => (
+                  <p key={w}>{w}</p>
+                ))}
+              </div>
+            )}
+            {(totalSegments !== rows.length || duplicateRowIds.size > 0) && (
+              <div className="text-xs text-muted-foreground bg-muted rounded-md px-3 py-2 space-y-0.5">
+                {duplicateRowIds.size > 0 && <p>Some entries are exact duplicates of others in this batch.</p>}
+                {totalSegments !== rows.length && (
+                  <p>
+                    Long spans are split at the 12:00–13:00 lunch break and into ≤2h segments:
+                    {` ${rows.length} ${rows.length === 1 ? 'entry' : 'entries'} will create
+                    ${totalSegments} Kimai ${totalSegments === 1 ? 'record' : 'records'}.`}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="border rounded-lg divide-y">
               {previewRows.map((r, i) => (
                 <div key={r.id} className="p-4 space-y-1.5">
@@ -298,7 +393,9 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
               </Button>
               <Button onClick={handleSubmit} disabled={submitting}>
                 <Send className="w-4 h-4 mr-1.5" />
-                {submitting ? 'Creating...' : `Submit ${rows.length} Entr${rows.length === 1 ? 'y' : 'ies'}`}
+                {submitting
+                  ? 'Creating...'
+                  : `Submit ${totalSegments} entr${totalSegments === 1 ? 'y' : 'ies'}`}
               </Button>
             </div>
           </div>
@@ -315,44 +412,4 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
       </DialogContent>
     </Dialog>
   );
-}
-
-function minutesBetween(begin: string, end: string): number | null {
-  if (!begin || !end) return null;
-  const [bh, bm] = begin.split(':').map(Number);
-  const [eh, em] = end.split(':').map(Number);
-  return eh * 60 + em - (bh * 60 + bm);
-}
-
-const LUNCH_START = 12 * 60; // 12:00
-const LUNCH_END = 13 * 60;   // 13:00
-
-function splitIntoHours(begin: string, end: string): [string, string][] {
-  if (!begin || !end) return [];
-  const [bh, bm] = begin.split(':').map(Number);
-  const [eh, em] = end.split(':').map(Number);
-  const start = bh * 60 + bm;
-  const finish = eh * 60 + em;
-
-  const segments: [string, string][] = [];
-  let cursor = start;
-  while (cursor < finish) {
-    // Skip over lunch break
-    if (cursor >= LUNCH_START && cursor < LUNCH_END) {
-      cursor = LUNCH_END;
-      continue;
-    }
-    // Cap segment end at lunch start if it would overlap
-    const segEnd = Math.min(cursor + 120, finish);
-    const effectiveEnd = segEnd > LUNCH_START && cursor < LUNCH_START ? LUNCH_START : segEnd;
-    segments.push([toHHMM(cursor), toHHMM(effectiveEnd)]);
-    cursor = effectiveEnd;
-  }
-  return segments;
-}
-
-function toHHMM(mins: number): string {
-  const h = Math.floor(mins / 60) % 24;
-  const m = mins % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }

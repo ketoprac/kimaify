@@ -109,7 +109,7 @@ export function LoginPage() {
         </Card>
 
         <p className="text-xs text-muted-foreground text-center mt-4">
-          Your token is stored locally and sent directly to the Kimai API.
+          Your token is kept for this browser session only and sent directly to the Kimai API.
         </p>
       </div>
     </div>

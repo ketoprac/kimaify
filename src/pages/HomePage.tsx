@@ -10,12 +10,14 @@ import { CreateTimesheetModal } from '../components/CreateTimesheetModal';
 import { EditTimesheetModal } from '../components/EditTimesheetModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { todayDateStr, formatDuration } from '../utils/time';
+import { todayDateStr, formatDuration, formatTime } from '../utils/time';
 import { addDays, subDays, addWeeks, subWeeks, startOfWeek, parse, format, isSameDay, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import type { Timesheet } from '../types';
 
 const TZ = 'Asia/Jakarta';
+// Batches at or above this size require typing the entry count to confirm deletion.
+const BULK_DELETE_CONFIRM_THRESHOLD = 5;
 
 export function HomePage() {
   const [allTimesheets, setAllTimesheets] = useState<Timesheet[]>([]);
@@ -116,21 +118,46 @@ export function HomePage() {
     }
   }, [refetchTimesheets]);
 
+  const handleDelete = useCallback(async (t: Timesheet) => {
+    if (!window.confirm('Delete this timesheet entry?')) return;
+    try {
+      await deleteTimesheet(t.id);
+      toast.success('Timesheet deleted');
+      refetchTimesheets();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete timesheet');
+    }
+  }, [refetchTimesheets]);
+
   const handleDeleteMany = useCallback(async (list: Timesheet[]) => {
     if (list.length === 0) return;
-    if (!window.confirm(`Delete ${list.length} timesheet entr${list.length === 1 ? 'y' : 'ies'}?`)) return;
-    let failed = 0;
+    // Typed confirmation for larger batches — a stray Enter on a plain
+    // confirm() must not mass-delete payroll records.
+    const noun = `timesheet entr${list.length === 1 ? 'y' : 'ies'}`;
+    if (list.length >= BULK_DELETE_CONFIRM_THRESHOLD) {
+      const answer = window.prompt(
+        `This permanently deletes ${list.length} ${noun}. Type the number of entries to confirm.`,
+      );
+      if (answer?.trim() !== String(list.length)) return;
+    } else if (!window.confirm(`Delete ${list.length} ${noun}?`)) {
+      return;
+    }
+
+    const failed: string[] = [];
     for (const t of list) {
       try {
         await deleteTimesheet(t.id);
       } catch {
-        failed++;
+        failed.push(`${formatTime(t.begin)} · ${t.id}`);
       }
     }
-    if (failed === 0) {
-      toast.success(`${list.length} entr${list.length === 1 ? 'y' : 'ies'} deleted`);
+    if (failed.length === 0) {
+      toast.success(`${list.length} ${noun} deleted`);
     } else {
-      toast.error(`${failed} of ${list.length} failed to delete`);
+      toast.error(
+        `${failed.length} of ${list.length} failed to delete:\n${failed.join('\n')}`,
+        { duration: 8000 },
+      );
     }
     refetchTimesheets();
   }, [refetchTimesheets]);

@@ -16,6 +16,9 @@ dist/
 *.swo
 *~
 
+# Claude Code local settings (may contain credentials)
+.claude/settings.local.json
+
 # OS
 .DS_Store
 Thumbs.db

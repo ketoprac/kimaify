@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { updateTimesheet } from '../api/timesheets';
 import { toISOWithTZ, formatTime } from '../utils/time';
@@ -37,6 +37,8 @@ export function EditTimesheetModal({ timesheet, onOpenChange, lookups, onSubmitt
   const [tags, setTags] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Synchronous latch — see CreateTimesheetModal for rationale.
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (!timesheet) return;
@@ -52,7 +54,8 @@ export function EditTimesheetModal({ timesheet, onOpenChange, lookups, onSubmitt
   }, [timesheet, lookups]);
 
   const handleSave = async () => {
-    if (!timesheet) return;
+    if (!timesheet || savingRef.current) return;
+    savingRef.current = true;
     if (!begin || !end) {
       setError('Start and end are required');
       return;
@@ -84,6 +87,7 @@ export function EditTimesheetModal({ timesheet, onOpenChange, lookups, onSubmitt
       setError(err.message || 'Failed to update timesheet');
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 

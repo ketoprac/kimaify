@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { HomePage } from './pages/HomePage';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         </Routes>
       </AuthProvider>
       <Toaster position="top-center" />
+      <Analytics />
     </BrowserRouter>
   );
 }

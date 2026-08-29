@@ -1,5 +1,10 @@
 const BASE_URL = 'https://timesheet.codeoffice.net/api';
 
+// Must match the storage used in AuthContext (sessionStorage — see note there).
+const TOKEN_KEY = 'kimaify_token';
+const tokenStorage: Pick<Storage, 'getItem' | 'removeItem'> =
+  typeof sessionStorage !== 'undefined' ? sessionStorage : localStorage;
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -14,7 +19,7 @@ export async function apiFetch<T>(
   options?: RequestInit,
   token?: string
 ): Promise<T> {
-  const authToken = token ?? localStorage.getItem('kimaify_token');
+  const authToken = token ?? tokenStorage.getItem(TOKEN_KEY);
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
@@ -27,7 +32,7 @@ export async function apiFetch<T>(
   });
 
   if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem('kimaify_token');
+    tokenStorage.removeItem(TOKEN_KEY);
     throw new ApiError('Your Kimai token is invalid or expired. Please sign in again.', res.status);
   }
 

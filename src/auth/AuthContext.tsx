@@ -41,6 +41,24 @@ export interface AuthContextValue extends AuthState {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = 'kimaify_token';
+const LEGACY_TOKEN_KEY = 'kimaify_token'; // same key, previously in localStorage
+// sessionStorage (not localStorage): token is a full account credential.
+// Tab-scoped storage limits exposure on shared machines and browser restarts;
+// users re-enter their Kimai token once per session.
+const storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> =
+  typeof sessionStorage !== 'undefined' ? sessionStorage : localStorage;
+
+/** One-time migration: move a pre-existing localStorage token into sessionStorage. */
+function migrateLegacyToken(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  const legacy = localStorage.getItem(LEGACY_TOKEN_KEY);
+  if (legacy === null) return null;
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  if (!storage.getItem(TOKEN_KEY)) {
+    storage.setItem(TOKEN_KEY, legacy);
+  }
+  return legacy;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, {
@@ -51,14 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem(TOKEN_KEY);
+    const saved = storage.getItem(TOKEN_KEY) ?? migrateLegacyToken();
     if (saved) {
       getUserInfo(saved)
         .then((user) => {
           dispatch({ type: 'LOGIN_SUCCESS', token: saved, user });
         })
         .catch(() => {
-          localStorage.removeItem(TOKEN_KEY);
+          storage.removeItem(TOKEN_KEY);
           dispatch({ type: 'LOGIN_FAILURE', error: 'Token expired or invalid' });
         });
     } else {
@@ -70,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'LOGIN_START' });
     try {
       const user = await getUserInfo(token);
-      localStorage.setItem(TOKEN_KEY, token);
+      storage.setItem(TOKEN_KEY, token);
       dispatch({ type: 'LOGIN_SUCCESS', token, user });
     } catch {
       dispatch({ type: 'LOGIN_FAILURE', error: 'Your Kimai token is invalid or expired. Please sign in again.' });
@@ -79,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
+    storage.removeItem(TOKEN_KEY);
     dispatch({ type: 'LOGOUT' });
   }, []);
 

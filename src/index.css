@@ -61,6 +61,6 @@
 
   code,
   pre {
-    font-family: 'Source Code Pro', 'SF Mono', Menlo, Consolas, monospace;
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, 'Liberation Mono', monospace;
   }
 }
