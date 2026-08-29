@@ -118,17 +118,6 @@ export function HomePage() {
     }
   }, [refetchTimesheets]);
 
-  const handleDelete = useCallback(async (t: Timesheet) => {
-    if (!window.confirm('Delete this timesheet entry?')) return;
-    try {
-      await deleteTimesheet(t.id);
-      toast.success('Timesheet deleted');
-      refetchTimesheets();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete timesheet');
-    }
-  }, [refetchTimesheets]);
-
   const handleDeleteMany = useCallback(async (list: Timesheet[]) => {
     if (list.length === 0) return;
     // Typed confirmation for larger batches — a stray Enter on a plain
