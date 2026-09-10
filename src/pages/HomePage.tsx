@@ -273,7 +273,7 @@ export function HomePage() {
         </>
       )}
 
-      <CreateTimesheetModal open={createOpen} onOpenChange={setCreateOpen} lookups={lookups} onSubmitted={refetchTimesheets} />
+      <CreateTimesheetModal open={createOpen} date={date} onOpenChange={setCreateOpen} lookups={lookups} onSubmitted={refetchTimesheets} />
 
       <EditTimesheetModal
         timesheet={editTarget}

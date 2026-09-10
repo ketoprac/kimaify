@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Plus, ArrowLeft, Send, Trash2, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useBulkRows } from '../hooks/useBulkRows';
@@ -33,6 +33,7 @@ import {
 
 interface Props {
   open: boolean;
+  date: string;
   onOpenChange: (open: boolean) => void;
   lookups: LookupMaps | null;
   onSubmitted: () => void;
@@ -54,7 +55,7 @@ function FieldLabel({ label, error, children }: { label: string; error?: string;
   );
 }
 
-export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted }: Props) {
+export function CreateTimesheetModal({ open, date: selectedDate, onOpenChange, lookups, onSubmitted }: Props) {
   const {
     date,
     rows,
@@ -65,6 +66,10 @@ export function CreateTimesheetModal({ open, onOpenChange, lookups, onSubmitted 
     duplicateRow,
     setRowStatus,
   } = useBulkRows(todayDateStr());
+
+  useEffect(() => {
+    if (open) setDate(selectedDate);
+  }, [open, selectedDate, setDate]);
 
   const [step, setStep] = useState<Step>('fill');
   const [errors, setErrors] = useState<Map<string, RowErrors>>(new Map());
