@@ -13,7 +13,8 @@ type RowAction =
   | { type: 'REMOVE_ROW'; id: string }
   | { type: 'UPDATE_ROW'; id: string; field: keyof BulkRow; value: string | number | null }
   | { type: 'DUPLICATE_ROW'; id: string }
-  | { type: 'SET_STATUS'; id: string; status: BulkRow['status']; errorMessage?: string };
+  | { type: 'SET_STATUS'; id: string; status: BulkRow['status']; errorMessage?: string }
+  | { type: 'RESET'; date?: string };
 
 function createEmptyRow(date: string): BulkRow {
   return {
@@ -71,6 +72,11 @@ function rowReducer(state: RowState, action: RowAction): RowState {
         ),
       };
 
+    case 'RESET': {
+      const date = action.date ?? state.date;
+      return { rows: [createEmptyRow(date)], date };
+    }
+
     default:
       return state;
   }
@@ -94,11 +100,13 @@ export function useBulkRows(initialDate: string) {
       dispatch({ type: 'SET_STATUS', id, status, errorMessage }),
     []
   );
+  const resetRows = useCallback((date?: string) => dispatch({ type: 'RESET', date }), []);
 
   return {
     ...state,
     setDate,
     setRows,
+    resetRows,
     addRow,
     removeRow,
     updateRow,

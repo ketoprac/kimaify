@@ -65,6 +65,7 @@ export function CreateTimesheetModal({ open, date: selectedDate, onOpenChange, l
     updateRow,
     duplicateRow,
     setRowStatus,
+    resetRows,
   } = useBulkRows(todayDateStr());
 
   useEffect(() => {
@@ -176,6 +177,11 @@ export function CreateTimesheetModal({ open, date: selectedDate, onOpenChange, l
   const reset = () => {
     setStep('fill');
     setErrors(new Map());
+    setSubmitting(false);
+    submittingRef.current = false;
+    // Drop submitted rows (and their statuses) so reopening shows a fresh form
+    // instead of the previous submission's result.
+    resetRows(selectedDate);
   };
 
   return (
