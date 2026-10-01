@@ -23,6 +23,7 @@ import { TagInput } from './TagInput';
 import { SubmissionResult } from './SubmissionResult';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -299,12 +300,12 @@ export function CreateTimesheetModal({ open, date: selectedDate, onOpenChange, l
                   </FieldLabel>
 
                   <FieldLabel label="Description">
-                    <Input
-                      type="text"
+                    <Textarea
                       value={row.description}
                       onChange={(e) => updateRow(row.id, 'description', e.target.value)}
                       placeholder="Description"
                       disabled={submitting}
+                      rows={2}
                     />
                   </FieldLabel>
 

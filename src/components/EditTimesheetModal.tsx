@@ -11,6 +11,7 @@ import { ActivitySelect } from './ActivitySelect';
 import { TagInput } from './TagInput';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -150,12 +151,12 @@ export function EditTimesheetModal({ timesheet, onOpenChange, lookups, onSubmitt
 
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted-foreground">Description</span>
-            <Input
-              type="text"
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description"
               disabled={saving}
+              rows={2}
             />
           </label>
 
