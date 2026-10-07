@@ -13,29 +13,48 @@ import { cn } from '@/lib/utils';
 import { todayDateStr, formatDuration, formatTime } from '../utils/time';
 import { addDays, subDays, addWeeks, subWeeks, startOfWeek, parse, format, isSameDay, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
+import { useOutletContext } from 'react-router-dom';
+import type { SidebarOutletContext, PresetSelection } from '../components/sidebar/sidebarTypes';
 import type { Timesheet } from '../types';
+
+interface OutletCtx extends SidebarOutletContext {
+  selectedPreset?: PresetSelection | null;
+  onClearSelectedPreset?: () => void;
+  setAllTimesheetsForSidebar?: (timesheets: Timesheet[]) => void;
+}
 
 const TZ = 'Asia/Jakarta';
 // Batches at or above this size require typing the entry count to confirm deletion.
 const BULK_DELETE_CONFIRM_THRESHOLD = 5;
 
 export function HomePage() {
+  const outletCtx = useOutletContext<OutletCtx | null>();
   const [allTimesheets, setAllTimesheets] = useState<Timesheet[]>([]);
   const [lookups, setLookups] = useState<LookupMaps | null>(null);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(todayDateStr());
   const [createOpen, setCreateOpen] = useState(false);
+  const [initialPreset, setInitialPreset] = useState<PresetSelection | null>(null);
   const [editTarget, setEditTarget] = useState<Timesheet | null>(null);
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
+
+  useEffect(() => {
+    if (outletCtx?.selectedPreset) {
+      setInitialPreset(outletCtx.selectedPreset);
+      setCreateOpen(true);
+      outletCtx.onClearSelectedPreset?.();
+    }
+  }, [outletCtx?.selectedPreset]);
 
   const refetchTimesheets = useCallback(async () => {
     try {
       const data = await getTimesheets();
       setAllTimesheets(data);
+      outletCtx?.setAllTimesheetsForSidebar?.(data);
     } catch {
       setAllTimesheets([]);
     }
-  }, []);
+  }, [outletCtx]);
 
   useEffect(() => {
     Promise.all([
@@ -44,6 +63,7 @@ export function HomePage() {
     ])
       .then(([data, maps]) => {
         setAllTimesheets(data);
+        outletCtx?.setAllTimesheetsForSidebar?.(data);
         setLookups(maps);
       })
       .catch(() => setAllTimesheets([]))
@@ -120,8 +140,6 @@ export function HomePage() {
 
   const handleDeleteMany = useCallback(async (list: Timesheet[]) => {
     if (list.length === 0) return;
-    // Typed confirmation for larger batches — a stray Enter on a plain
-    // confirm() must not mass-delete payroll records.
     const noun = `timesheet entr${list.length === 1 ? 'y' : 'ies'}`;
     if (list.length >= BULK_DELETE_CONFIRM_THRESHOLD) {
       const answer = window.prompt(
@@ -227,7 +245,7 @@ export function HomePage() {
               Month
             </Button>
           </div>
-          <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" className="gap-1.5" onClick={() => { setInitialPreset(null); setCreateOpen(true); }}>
             <Plus className="w-4 h-4" />
             Add Activity
             <kbd className="hidden sm:inline-flex items-center justify-center h-4 px-1 rounded border border-current/30 text-[10px] font-mono opacity-60 ml-0.5">N</kbd>
@@ -265,7 +283,7 @@ export function HomePage() {
             onEdit={setEditTarget}
             onDelete={handleDelete}
             onDeleteMany={handleDeleteMany}
-            onAdd={() => setCreateOpen(true)}
+            onAdd={() => { setInitialPreset(null); setCreateOpen(true); }}
           />
           <div className="flex items-center justify-end text-sm text-muted-foreground">
             Total: <span className="font-semibold text-foreground ml-1.5">{formatDuration(totalSeconds)}</span>
@@ -273,7 +291,17 @@ export function HomePage() {
         </>
       )}
 
-      <CreateTimesheetModal open={createOpen} date={date} onOpenChange={setCreateOpen} lookups={lookups} onSubmitted={refetchTimesheets} />
+      <CreateTimesheetModal
+        open={createOpen}
+        date={date}
+        initialPreset={initialPreset}
+        onOpenChange={(o) => {
+          setCreateOpen(o);
+          if (!o) setInitialPreset(null);
+        }}
+        lookups={lookups}
+        onSubmitted={refetchTimesheets}
+      />
 
       <EditTimesheetModal
         timesheet={editTarget}

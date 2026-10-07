@@ -8,3 +8,10 @@ export async function getProjects(customerId: number): Promise<Project[]> {
 export async function getAllProjects(): Promise<Project[]> {
   return apiFetch<Project[]>('/projects?visible=1&size=500');
 }
+
+export async function updateProject(id: number, patch: Partial<Project>): Promise<Project> {
+  return apiFetch<Project>(`/projects/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}

@@ -1,6 +1,12 @@
 import { useReducer, useCallback } from 'react';
 import type { BulkRow } from '../types';
 
+export interface PresetValues {
+  customerId?: number | null;
+  projectId?: number | null;
+  activityId?: number | null;
+}
+
 interface RowState {
   rows: BulkRow[];
   date: string;
@@ -14,16 +20,16 @@ type RowAction =
   | { type: 'UPDATE_ROW'; id: string; field: keyof BulkRow; value: string | number | null }
   | { type: 'DUPLICATE_ROW'; id: string }
   | { type: 'SET_STATUS'; id: string; status: BulkRow['status']; errorMessage?: string }
-  | { type: 'RESET'; date?: string };
+  | { type: 'RESET'; date?: string; preset?: PresetValues | null };
 
-function createEmptyRow(date: string): BulkRow {
+function createEmptyRow(date: string, preset?: PresetValues | null): BulkRow {
   return {
     id: crypto.randomUUID(),
     begin: '',
     end: '',
-    customerId: null,
-    projectId: null,
-    activityId: null,
+    customerId: preset?.customerId ?? null,
+    projectId: preset?.projectId ?? null,
+    activityId: preset?.activityId ?? null,
     description: '',
     tags: '',
   };
@@ -74,7 +80,7 @@ function rowReducer(state: RowState, action: RowAction): RowState {
 
     case 'RESET': {
       const date = action.date ?? state.date;
-      return { rows: [createEmptyRow(date)], date };
+      return { rows: [createEmptyRow(date, action.preset)], date };
     }
 
     default:
@@ -100,7 +106,7 @@ export function useBulkRows(initialDate: string) {
       dispatch({ type: 'SET_STATUS', id, status, errorMessage }),
     []
   );
-  const resetRows = useCallback((date?: string) => dispatch({ type: 'RESET', date }), []);
+  const resetRows = useCallback((date?: string, preset?: PresetValues | null) => dispatch({ type: 'RESET', date, preset }), []);
 
   return {
     ...state,

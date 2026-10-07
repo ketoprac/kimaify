@@ -40,9 +40,17 @@ function writeCache(data: Refs) {
   sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
 }
 
-export async function fetchRefs(): Promise<Refs> {
-  const cached = readCache();
-  if (cached) return cached;
+export function invalidateRefs() {
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+  } catch { /* ignore */ }
+}
+
+export async function fetchRefs(opts?: { force?: boolean }): Promise<Refs> {
+  if (!opts?.force) {
+    const cached = readCache();
+    if (cached) return cached;
+  }
 
   const [customers, projects, activities] = await Promise.all([
     getCustomers(),

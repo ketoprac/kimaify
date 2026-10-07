@@ -32,9 +32,12 @@ import {
   DialogDescription,
 } from './ui/dialog';
 
+import type { PresetValues } from '../hooks/useBulkRows';
+
 interface Props {
   open: boolean;
   date: string;
+  initialPreset?: PresetValues | null;
   onOpenChange: (open: boolean) => void;
   lookups: LookupMaps | null;
   onSubmitted: () => void;
@@ -56,7 +59,7 @@ function FieldLabel({ label, error, children }: { label: string; error?: string;
   );
 }
 
-export function CreateTimesheetModal({ open, date: selectedDate, onOpenChange, lookups, onSubmitted }: Props) {
+export function CreateTimesheetModal({ open, date: selectedDate, initialPreset, onOpenChange, lookups, onSubmitted }: Props) {
   const {
     date,
     rows,
@@ -70,8 +73,13 @@ export function CreateTimesheetModal({ open, date: selectedDate, onOpenChange, l
   } = useBulkRows(todayDateStr());
 
   useEffect(() => {
-    if (open) setDate(selectedDate);
-  }, [open, selectedDate, setDate]);
+    if (open) {
+      setDate(selectedDate);
+      if (initialPreset) {
+        resetRows(selectedDate, initialPreset);
+      }
+    }
+  }, [open, selectedDate, initialPreset, setDate, resetRows]);
 
   const [step, setStep] = useState<Step>('fill');
   const [errors, setErrors] = useState<Map<string, RowErrors>>(new Map());
