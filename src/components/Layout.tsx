@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import { LogOut, Timer, Moon, Sun, Menu, PanelLeft } from 'lucide-react';
+import { LogOut, Timer, Moon, Sun, Menu, PanelLeft, Settings } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Sidebar } from './sidebar/Sidebar';
+import { SettingsModal } from './SettingsModal';
 import { useSidebarData, pushRecentCombination } from './sidebar/useSidebarData';
 import type { PresetSelection } from './sidebar/sidebarTypes';
 import type { Timesheet } from '../types';
@@ -21,6 +22,7 @@ export function Layout() {
 
   const [selectedPreset, setSelectedPreset] = useState<PresetSelection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem(COLLAPSED_KEY) === '1';
@@ -92,6 +94,16 @@ export function Layout() {
               </div>
             )}
             <Button
+              onClick={() => setSettingsOpen(true)}
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button
               onClick={toggle}
               variant="ghost"
               size="sm"
@@ -155,6 +167,9 @@ export function Layout() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Settings modal */}
+        <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
 
         <main className="flex-1 min-w-0 max-w-7xl mx-auto px-4 py-6">
           <Outlet

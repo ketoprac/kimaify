@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateRow,
+  validateActivityDuration,
   hasErrors,
   isWeekend,
   lookbackFloor,
@@ -91,6 +92,48 @@ describe('isWeekend', () => {
     expect(isWeekend(0)).toBe(true);
     expect(isWeekend(1)).toBe(false);
     expect(isWeekend(5)).toBe(false);
+  });
+});
+
+describe('validateActivityDuration', () => {
+  it('passes when duration is equal to or less than default 2 hours', () => {
+    expect(validateActivityDuration('09:00', '11:00')).toBeNull();
+    expect(validateActivityDuration('09:00', '10:30')).toBeNull();
+  });
+
+  it('rejects when duration exceeds default 2 hours', () => {
+    expect(validateActivityDuration('09:00', '11:30')).toBe('Activity duration cannot exceed 2 hours');
+  });
+
+  it('validates 30 minutes limit', () => {
+    expect(validateActivityDuration('09:00', '09:30', 30)).toBeNull();
+    expect(validateActivityDuration('09:00', '09:45', 30)).toBe('Activity duration cannot exceed 30 minutes');
+  });
+
+  it('validates 1 hour limit', () => {
+    expect(validateActivityDuration('09:00', '10:00', 60)).toBeNull();
+    expect(validateActivityDuration('09:00', '10:15', 60)).toBe('Activity duration cannot exceed 1 hour');
+  });
+
+  it('validates 3 hours limit', () => {
+    expect(validateActivityDuration('09:00', '12:00', 180)).toBeNull();
+    expect(validateActivityDuration('09:00', '12:30', 180)).toBe('Activity duration cannot exceed 3 hours');
+  });
+
+  it('validates 4 hours limit', () => {
+    expect(validateActivityDuration('08:00', '12:00', 240)).toBeNull();
+    expect(validateActivityDuration('08:00', '12:30', 240)).toBe('Activity duration cannot exceed 4 hours');
+  });
+
+  it('enforces maximum 4-hour limit even if a larger limit is configured', () => {
+    // Passing 300 minutes (5 hours) is capped at 240 minutes (4 hours)
+    expect(validateActivityDuration('08:00', '12:00', 300)).toBeNull();
+    expect(validateActivityDuration('08:00', '12:30', 300)).toBe('Activity duration cannot exceed 4 hours');
+  });
+
+  it('returns null if begin or end is missing', () => {
+    expect(validateActivityDuration('', '10:00')).toBeNull();
+    expect(validateActivityDuration('09:00', '')).toBeNull();
   });
 });
 

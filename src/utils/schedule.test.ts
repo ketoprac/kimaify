@@ -52,6 +52,47 @@ describe('splitIntoHours', () => {
       expect(b < e).toBe(true);
     }
   });
+
+  it('splits into 30-minute segments when configured', () => {
+    expect(splitIntoHours('09:00', '11:00', 30)).toEqual([
+      ['09:00', '09:30'],
+      ['09:30', '10:00'],
+      ['10:00', '10:30'],
+      ['10:30', '11:00'],
+    ]);
+  });
+
+  it('splits into 1-hour segments when configured', () => {
+    expect(splitIntoHours('09:00', '12:00', 60)).toEqual([
+      ['09:00', '10:00'],
+      ['10:00', '11:00'],
+      ['11:00', '12:00'],
+    ]);
+  });
+
+  it('splits into 3-hour segments when configured, cutting at lunch', () => {
+    // 09:00–16:00: 09:00-12:00 (3h), lunch skipped (12-13), 13:00-16:00 (3h)
+    expect(splitIntoHours('09:00', '16:00', 180)).toEqual([
+      ['09:00', '12:00'],
+      ['13:00', '16:00'],
+    ]);
+  });
+
+  it('splits into 4-hour segments when configured', () => {
+    // 08:00–12:00 is 4 hours
+    expect(splitIntoHours('08:00', '12:00', 240)).toEqual([
+      ['08:00', '12:00'],
+    ]);
+  });
+
+  it('enforces maximum ceiling of 4 hours (240 minutes) even if higher value is passed', () => {
+    // Passing 360m (6h): should be clamped to 240m (4h)
+    // 08:00–17:00: 08:00-12:00 (4h), lunch skipped (12-13), 13:00-17:00 (4h)
+    expect(splitIntoHours('08:00', '17:00', 360)).toEqual([
+      ['08:00', '12:00'],
+      ['13:00', '17:00'],
+    ]);
+  });
 });
 
 describe('minutesBetween', () => {

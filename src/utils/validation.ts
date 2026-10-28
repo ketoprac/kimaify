@@ -1,5 +1,7 @@
 import type { BulkRow } from '../types';
 import { nowJakarta } from './time';
+import { minutesBetween } from './schedule';
+import { DEFAULT_MAX_ACTIVITY_MINUTES, ABSOLUTE_MAX_ACTIVITY_MINUTES } from '../context/SettingsContext';
 
 export interface RowErrors {
   begin?: string;
@@ -63,4 +65,29 @@ export function hasErrors(errors: RowErrors): boolean {
 
 export function isWeekend(dayOfWeek: number): boolean {
   return dayOfWeek === 0 || dayOfWeek === 6; // Sunday / Saturday
+}
+
+/**
+ * Validates that an activity duration does not exceed the allowed maximum duration (capped at 4 hours).
+ * Returns an error string if invalid, or null if valid.
+ */
+export function validateActivityDuration(
+  begin: string,
+  end: string,
+  maxMinutes: number = DEFAULT_MAX_ACTIVITY_MINUTES
+): string | null {
+  const duration = minutesBetween(begin, end);
+  if (duration === null) return null;
+
+  // Enforce absolute maximum of 4 hours
+  const enforcedLimit = Math.min(Math.max(1, maxMinutes), ABSOLUTE_MAX_ACTIVITY_MINUTES);
+
+  if (duration > enforcedLimit) {
+    const label =
+      enforcedLimit === 30
+        ? '30 minutes'
+        : `${enforcedLimit / 60} hour${enforcedLimit / 60 > 1 ? 's' : ''}`;
+    return `Activity duration cannot exceed ${label}`;
+  }
+  return null;
 }

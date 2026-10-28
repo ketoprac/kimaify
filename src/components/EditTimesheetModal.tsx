@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { updateTimesheet } from '../api/timesheets';
 import { toISOWithTZ, formatTime } from '../utils/time';
+import { validateActivityDuration } from '../utils/validation';
+import { useSettings } from '../context/SettingsContext';
 import type { Timesheet } from '../types';
 import type { LookupMaps } from '../api/reference';
 import { TimeInput } from './TimeInput';
@@ -28,6 +30,7 @@ interface Props {
 }
 
 export function EditTimesheetModal({ timesheet, onOpenChange, lookups, onSubmitted }: Props) {
+  const { maxDurationMinutes } = useSettings();
   const [date, setDate] = useState('');
   const [begin, setBegin] = useState('');
   const [end, setEnd] = useState('');
@@ -59,14 +62,23 @@ export function EditTimesheetModal({ timesheet, onOpenChange, lookups, onSubmitt
     savingRef.current = true;
     if (!begin || !end) {
       setError('Start and end are required');
+      savingRef.current = false;
       return;
     }
     if (begin >= end) {
       setError('End must be after start');
+      savingRef.current = false;
+      return;
+    }
+    const durationError = validateActivityDuration(begin, end, maxDurationMinutes);
+    if (durationError) {
+      setError(durationError);
+      savingRef.current = false;
       return;
     }
     if (projectId === null || activityId === null) {
       setError('Project and activity are required');
+      savingRef.current = false;
       return;
     }
 

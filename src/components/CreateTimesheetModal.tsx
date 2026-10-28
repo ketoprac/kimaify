@@ -5,6 +5,7 @@ import { useBulkRows } from '../hooks/useBulkRows';
 import { createTimesheet } from '../api/timesheets';
 import { todayDateStr, toISOWithTZ } from '../utils/time';
 import { minutesBetween, splitIntoHours } from '../utils/schedule';
+import { useSettings } from '../context/SettingsContext';
 import {
   validateRow,
   hasErrors,
@@ -60,6 +61,7 @@ function FieldLabel({ label, error, children }: { label: string; error?: string;
 }
 
 export function CreateTimesheetModal({ open, date: selectedDate, initialPreset, onOpenChange, lookups, onSubmitted }: Props) {
+  const { maxDurationMinutes, maxDurationLabel } = useSettings();
   const {
     date,
     rows,
@@ -111,9 +113,9 @@ export function CreateTimesheetModal({ open, date: selectedDate, initialPreset, 
       project: r.projectId != null ? lookups?.projectName.get(r.projectId) ?? '-' : '-',
       activity: r.activityId != null ? lookups?.activityName.get(r.activityId) ?? '-' : '-',
       duration: minutesBetween(r.begin, r.end),
-      segments: splitIntoHours(r.begin, r.end).length,
+      segments: splitIntoHours(r.begin, r.end, maxDurationMinutes).length,
     }));
-  }, [rows, lookups]);
+  }, [rows, lookups, maxDurationMinutes]);
 
   const totalSegments = useMemo(
     () => previewRows.reduce((sum, r) => sum + r.segments, 0),
@@ -153,7 +155,7 @@ export function CreateTimesheetModal({ open, date: selectedDate, initialPreset, 
     for (const row of rows) {
       setRowStatus(row.id, 'submitting');
       try {
-        for (const [begin, end] of splitIntoHours(row.begin, row.end)) {
+        for (const [begin, end] of splitIntoHours(row.begin, row.end, maxDurationMinutes)) {
           const payload: CreateTimesheetPayload = {
             begin: toISOWithTZ(date, begin),
             end: toISOWithTZ(date, end),
@@ -360,7 +362,7 @@ export function CreateTimesheetModal({ open, date: selectedDate, initialPreset, 
                 {duplicateRowIds.size > 0 && <p>Some entries are exact duplicates of others in this batch.</p>}
                 {totalSegments !== rows.length && (
                   <p>
-                    Long spans are split at the 12:00–13:00 lunch break and into ≤2h segments:
+                    Long spans are split at the 12:00–13:00 lunch break and into ≤{maxDurationLabel} segments:
                     {` ${rows.length} ${rows.length === 1 ? 'entry' : 'entries'} will create
                     ${totalSegments} Kimai ${totalSegments === 1 ? 'record' : 'records'}.`}
                   </p>

@@ -1,9 +1,10 @@
+import { DEFAULT_MAX_ACTIVITY_MINUTES, ABSOLUTE_MAX_ACTIVITY_MINUTES } from '../context/SettingsContext';
+
 // Segment math for bulk timesheet rows. Extracted from CreateTimesheetModal
 // so the preview count and the submitted payload share one tested source of truth.
 
 export const LUNCH_START = 12 * 60; // 12:00
 export const LUNCH_END = 13 * 60; // 13:00
-const SEGMENT_MINUTES = 120;
 
 export function minutesBetween(begin: string, end: string): number | null {
   if (!begin || !end) return null;
@@ -13,15 +14,23 @@ export function minutesBetween(begin: string, end: string): number | null {
 }
 
 /**
- * Split a wall-clock span into ≤2h segments, skipping 12:00–13:00 lunch.
+ * Split a wall-clock span into segments of at most `maxMinutes` (default 2h, max 4h),
+ * skipping 12:00–13:00 lunch.
  * Spans crossing lunch are cut at 12:00 and resumed at 13:00.
  */
-export function splitIntoHours(begin: string, end: string): [string, string][] {
+export function splitIntoHours(
+  begin: string,
+  end: string,
+  maxMinutes: number = DEFAULT_MAX_ACTIVITY_MINUTES
+): [string, string][] {
   if (!begin || !end) return [];
   const [bh, bm] = begin.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   const start = bh * 60 + bm;
   const finish = eh * 60 + em;
+
+  // Enforce maximum limit of 4 hours (240 minutes)
+  const segmentMinutes = Math.min(Math.max(1, maxMinutes), ABSOLUTE_MAX_ACTIVITY_MINUTES);
 
   const segments: [string, string][] = [];
   let cursor = start;
@@ -32,7 +41,7 @@ export function splitIntoHours(begin: string, end: string): [string, string][] {
       continue;
     }
     // Cap segment end at lunch start if it would overlap
-    const segEnd = Math.min(cursor + SEGMENT_MINUTES, finish);
+    const segEnd = Math.min(cursor + segmentMinutes, finish);
     const effectiveEnd = segEnd > LUNCH_START && cursor < LUNCH_START ? LUNCH_START : segEnd;
     segments.push([toHHMM(cursor), toHHMM(effectiveEnd)]);
     cursor = effectiveEnd;
